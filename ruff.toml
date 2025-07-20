@@ -1,0 +1,88 @@
+[lint]
+# https://docs.astral.sh/ruff/rules/
+select = [
+    "ANN",  # flake8-annotations
+    "ASYNC",  # flake8-async
+    "S",  # flake8-bandit
+    "BLE",  # flake8-blind-except
+    "FBT",  # flake8-boolean-trap
+    "B",  # flake8-bugbear
+    "A",  # flake8-builtins
+    "COM",  # flake8-commas
+    "C4",  # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T10",  # flake8-debugger
+    "DJ",  # flake8-django
+    "EM",  # flake8-errmsg
+    "EXE",  # flake8-executable
+    "FIX",  # flake8-fixme
+    "FA",  # flake8-future-annotations
+    "INT",  # flake8-gettext
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "LOG",  # flake8-logging
+    "G",  # flake8-logging-format
+    "INP",  # flake8-no-pep420
+    "PIE",  # flake8-pie
+    # "T20",  # flake8-print
+    "PYI",  # flake8-pyi
+    "PT",  # flake8-pytest-style
+    "Q",  # flake8-quotes
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SLF",  # flake8-self
+    "SIM",  # flake8-simplify
+    "SLOT",  # flake8-slots
+    "TID",  # flake8-tidy-imports
+    "TD",  # flake8-todos
+    "TC",  # flake8-type-checking
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "FLY",  # flynt
+    "C90",  # mccabe
+    "NPY",  # NumPy-specific rules
+    "PD",  # pandas-vet
+    "N",  # pep8-naming
+    "PERF",  # Perflint
+    "E",  # pycodestyle error
+    "W",  # pycodestyle warning
+    "D",  # pydocstyle
+    "F",  # Pyflakes
+    "PGH",  # pygrep-hooks
+    "PL",  # Pylint
+    "PLC",  # Convention
+    "PLE",  # Error
+    "PLR",  # Refactor
+    "PLW",  # Warning
+    "UP",  # pyupgrade
+    "FURB",  # refurb
+    "RUF",  # Ruff-specific rules
+    "TRY",  # tryceratops
+]
+
+extend-select = [
+    "I",  # isort
+    "S113",  # request-without-timeout
+]
+ignore = [
+    "D100",  # undocumented-public-module
+    "D101",  # undocumented-public-class
+    "D102",  # undocumented-public-method
+    "D103",  # undocumented-public-function
+    "D104",  # undocumented-public-package
+    "D107",  # undocumented-public-init
+    "D105",  # undocumented-magic-method
+    "D213",  # multi-line-summary-first-line
+    "E501",  # line-too-long
+    "T20",  # flake8-print
+    "COM812",  # missing-trailing-comma  (conflicts with linter)
+]
+
+[format]
+docstring-code-format = true
+
+[lint.pydocstyle]
+convention = "pep257"
+
+[lint.isort]
+combine-as-imports = true

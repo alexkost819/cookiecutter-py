@@ -1,0 +1,81 @@
+name: Build, Lint, and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    container:
+      image: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore UV cache
+        uses: actions/cache@v4
+        with:
+          path: .uv-cache
+          key: ${{ hashFiles('uv.lock') }}
+
+      - name: Build
+        run: uv build
+
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build
+    container:
+      image: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore UV cache
+        uses: actions/cache@v4
+        with:
+          path: .uv-cache
+          key: ${{ hashFiles('uv.lock') }}
+
+      - name: Install the project
+        run: uv sync --locked --all-groups
+
+      - name: Run tests
+        run: ./unit_tests.sh
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build
+    container:
+      image: ghcr.io/astral-sh/uv:python3.13-bookworm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore UV cache
+        uses: actions/cache@v4
+        with:
+          path: .uv-cache
+          key: ${{ hashFiles('uv.lock') }}
+
+      - name: Install the project
+        run: uv sync --locked --all-groups
+
+      - name: Run linting
+        # aligned with ./lint with changes to ensure exit codes are raised
+        run: |
+          uv run --only-group lint typos
+          uv run --only-group lint ruff format --check
+          uv run --only-group lint docformatter --in-place src/ tests/
+          uv run --only-group lint ruff check
+          uv run --only-group lint mypy

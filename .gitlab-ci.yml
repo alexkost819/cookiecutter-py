@@ -1,0 +1,124 @@
+.docker-image-build-deps: &docker-image-build-deps
+  - Dockerfile
+  - telegraf/telegraf.template.conf
+  - docker_entrypoint.sh
+  - uv.lock
+  - .gitlab-ci.packaging.yml
+  - src/ivi_validation/data/display_capture_stills/libDeckLinkAPI.so
+
+default:
+  interruptible: true
+  tags:
+    - sdv
+
+cache:
+  key: $CI_JOB_NAME-$CI_COMMIT_REF_SLUG
+
+variables:
+  # this is the default if we can use the already-existing dockerfile
+  DOCKER_TEST_IMAGE: $CI_REGISTRY_IMAGE/$CI_DEFAULT_BRANCH:latest
+  # this is the override if this pipeline needs to create a new dockerfile
+  DOCKER_TEST_IMAGE_OVERRIDE: $CI_REGISTRY_IMAGE/test:$CI_COMMIT_SHORT_SHA
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "parent_pipeline"
+
+build-package:
+  # this step is only to confirm ivi_validation package can be built; we otherwise
+  # do not use the package anywhere in prod
+  stage: build
+  image: ghcr.io/astral-sh/uv:python3.13-bookworm
+  variables:
+    UV_CACHE_DIR: .uv-cache
+    # Our project is configured to shallow clone to make CI faster, but this step needs
+    # a full clone
+    # https://docs.gitlab.com/ee/ci/runners/configure_runners.html#shallow-cloning
+    # https://docs.gitlab.com/ee/ci/pipelines/settings.html#limit-the-number-of-changes-fetched-during-clone
+    GIT_DEPTH: "0"
+    # GitLab CI creates a separate mountpoint for the build directory,
+    # so we need to copy instead of using hard links.
+    UV_LINK_MODE: copy
+    # uncomment for more debugging output
+    # SETUPTOOLS_SCM_DEBUG: "1"
+  cache:
+    - key:
+        files:
+          - uv.lock
+      paths:
+        - $UV_CACHE_DIR
+  script:
+    - uv build
+    - uv cache prune --ci  # see https://docs.astral.sh/uv/guides/integration/gitlab/
+  timeout: 5m
+
+build-publish-dev-docker-image:
+  # Reference: https://docs.gitlab.com/ee/ci/docker/using_kaniko.html
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+  before_script:
+    - |
+      sed -e "s|\${INFLUX_HOST}|$INFLUX_HOST|g" \
+      -e "s|\${INFLUX_TOKEN}|$INFLUX_TOKEN|g" \
+      -e "s|\${INFLUX_ORG}|$INFLUX_ORG|g" \
+      -e "s|\${INFLUX_BUCKET}|$INFLUX_BUCKET|g" \
+      telegraf/telegraf.template.conf > telegraf/telegraf.conf
+    - |
+      sed -e "s|\${INFLUX_HOST}|http://127.0.0.1:8086|g" \
+      -e "s|\${INFLUX_TOKEN}|$INFLUX_TOKEN|g" \
+      -e "s|\${INFLUX_ORG}|$INFLUX_ORG|g" \
+      -e "s|\${INFLUX_BUCKET}|$INFLUX_BUCKET|g" \
+      telegraf/telegraf.template.conf > telegraf/telegraf-local.conf
+  script:
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${DOCKER_TEST_IMAGE_OVERRIDE}"
+  after_script:
+    - echo $DOCKER_TEST_IMAGE_OVERRIDE  # print to console
+    - echo "DOCKER_TEST_IMAGE=$DOCKER_TEST_IMAGE_OVERRIDE" >> build.env
+  timeout: 10m  # empirical
+  rules:
+    - changes: *docker-image-build-deps
+  artifacts:
+    reports:
+      dotenv: build.env
+
+unit-test:
+  stage: test
+  image: $DOCKER_TEST_IMAGE
+  script:
+    - ./unit_tests.sh
+  timeout: 5m
+
+lint:
+  stage: test
+  image: $DOCKER_TEST_IMAGE
+  script:
+    # aligned with ./lint with changes to ensure exit codes are raised
+    - uv run --only-group lint typos
+    - uv run --only-group lint ruff format --check
+    - uv run --only-group lint docformatter --in-place src/ tests/ *.py
+    - uv run --only-group lint ruff check
+    - uv run --only-group lint mypy
+  timeout: 5m
+
+deploy-prod-docker-image:
+  stage: deploy
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [""]
+  variables:
+    DOCKER_RELEASE_IMAGE: $CI_REGISTRY_IMAGE/$CI_DEFAULT_BRANCH:latest
+  script:
+    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - crane copy $DOCKER_TEST_IMAGE $DOCKER_RELEASE_IMAGE
+    - crane tag $DOCKER_RELEASE_IMAGE $CI_COMMIT_SHORT_SHA
+    - crane delete $DOCKER_TEST_IMAGE
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *docker-image-build-deps
+  timeout: 5m

@@ -1,0 +1,4 @@
+# https://stackoverflow.com/a/52630393
+alias emb from IPython import embed; embed(colors="neutral")
+print('NOTE: Use "emb" to enter *better* IPython shell')
+
