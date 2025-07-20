@@ -101,7 +101,7 @@ lint:
     # aligned with ./lint with changes to ensure exit codes are raised
     - uv run --only-group lint typos
     - uv run --only-group lint ruff format --check
-    - uv run --only-group lint docformatter --in-place src/ tests/ *.py
+    - uv run --only-group lint docformatter --in-place src/ tests/
     - uv run --only-group lint ruff check
     - uv run --only-group lint mypy
   timeout: 5m

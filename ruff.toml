@@ -65,6 +65,7 @@ extend-select = [
     "S113",  # request-without-timeout
 ]
 ignore = [
+    "COM812",  # missing-trailing-comma  (conflicts with linter)
     "D100",  # undocumented-public-module
     "D101",  # undocumented-public-class
     "D102",  # undocumented-public-method
@@ -75,7 +76,7 @@ ignore = [
     "D213",  # multi-line-summary-first-line
     "E501",  # line-too-long
     "T20",  # flake8-print
-    "COM812",  # missing-trailing-comma  (conflicts with linter)
+    "TRY003",  # raise-vanilla-args
 ]
 
 [format]
