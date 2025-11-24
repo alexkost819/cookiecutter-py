@@ -15,7 +15,7 @@ jobs:
       image: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -37,7 +37,7 @@ jobs:
       image: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Restore UV cache
         uses: actions/cache@v4
@@ -60,7 +60,7 @@ jobs:
       image: ghcr.io/astral-sh/uv:python3.13-bookworm
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Restore UV cache
         uses: actions/cache@v4
